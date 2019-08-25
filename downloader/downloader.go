@@ -15,7 +15,7 @@ func LoadDomains(sourceFile string) <-chan string {
 	defer file.Close()
 
 	// используем map как set, чтобы сохранять только уникальные домены
-	domains := map[string]bool{}
+	domains := make(map[string]bool)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -51,21 +51,6 @@ func FilterDownloadedDomains(domains <-chan string, storage *core.SiteStorage) <
 	}
 
 	close(out)
-	return out
-}
-
-// Сохраняет результат скачивания сайтов в хранилище
-func SaveSites(sites <-chan core.Site, storage *core.SiteStorage) <-chan core.Site {
-	out := make(chan core.Site)
-
-	go func() {
-		for site := range sites {
-			storage.Save(site)
-			out <- site
-		}
-		close(out)
-	}()
-
 	return out
 }
 
@@ -155,7 +140,7 @@ func Download(config *core.Config, storage *core.SiteStorage) DownloadStatus {
 	domains = FilterDownloadedDomains(domains, storage)
 	status.Missed = status.Total - len(domains)
 	sites, inProgress := ParallelDownloadSites(domains, config.MaxThreads)
-	sites = SaveSites(sites, storage)
+	sites = core.SaveSites(sites, storage)
 	sites = CollectStatus(sites, status, config.LogFails)
 
 	// ждём окончания процесса скачки сайтов и выводим промежуточный статус

@@ -5,43 +5,13 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
-type SiteStatus int
-
-const (
-	StatusNone    SiteStatus = iota // не скачен
-	StatusSuccess                   // успешно скачен
-	StatusFail                      // была ошибка при скачивании
-)
-
-type Site struct {
-	Domain  string     `json:"domain"`
-	Status  SiteStatus `json:"status"`
-	Url     string     `json:"url"`
-	Content string     `json:"content"`
-	Error   SiteError  `json:"error"`
-}
-
-type SiteError struct {
-	Code    int    `json:"code"` // http статус или иное
-	Message string `json:"message"`
-}
-
+// Хранилище сайтов. Каждый сайт сохраняется в отдельный json файл в общей дириктории
 type SiteStorage struct {
 	dir string // папка для файлов с сайтами
-}
-
-func NewSite(domain string) Site {
-	return Site{domain, StatusNone, "", "", SiteError{}}
-}
-
-func NewSuccessSite(domain, url, content string) Site {
-	return Site{domain, StatusSuccess, url, content, SiteError{}}
-}
-
-func NewFailSite(domain, url string, error SiteError) Site {
-	return Site{domain, StatusFail, url, "", error}
 }
 
 func NewSiteStorage(dir string) *SiteStorage {
@@ -65,6 +35,14 @@ func (s *SiteStorage) siteFilePath(domain string) string {
 	return s.dir + domain + ".json"
 }
 
+func (s *SiteStorage) domainFromFileName(filename string) string {
+	ext := filepath.Ext(filename)
+	if ext != ".json" {
+		return ""
+	}
+	return strings.TrimSuffix(filename, ext)
+}
+
 func (s *SiteStorage) ensureDir() {
 	_, err := os.Stat(s.dir)
 	if os.IsNotExist(err) {
@@ -73,6 +51,7 @@ func (s *SiteStorage) ensureDir() {
 	}
 }
 
+// Загружает сайт из хранилища по его домену. Если сайта в хранилище нет, то возвращает пустой сайт
 func (s *SiteStorage) Load(domain string) Site {
 	path := s.siteFilePath(domain)
 
@@ -96,6 +75,7 @@ func (s *SiteStorage) Load(domain string) Site {
 	return site
 }
 
+// Сохраняет сайт в хранилище
 func (s *SiteStorage) Save(site Site) {
 	path := s.siteFilePath(site.Domain)
 
@@ -104,4 +84,19 @@ func (s *SiteStorage) Save(site Site) {
 
 	err = ioutil.WriteFile(path, bytes, os.ModePerm)
 	FailOnError(err)
+}
+
+// Возрващает список доменов всех сайтов в хранилище
+func (s *SiteStorage) GetDomains() []string {
+	files, err := ioutil.ReadDir(s.dir)
+	FailOnError(err)
+
+	domains := make([]string, 0, len(files))
+	for _, f := range files {
+		if domain := s.domainFromFileName(f.Name()); domain != "" {
+			domains = append(domains, domain)
+		}
+	}
+
+	return domains
 }
