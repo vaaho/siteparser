@@ -12,6 +12,7 @@ type Config struct {
 	ExportColumns string
 }
 
+// Считыает входные аргументы для программы
 func ParseConfigFromFlags() *Config {
 	config := &Config{}
 
