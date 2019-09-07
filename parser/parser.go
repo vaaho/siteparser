@@ -3,7 +3,6 @@ package parser
 import (
 	"log"
 	"siteparser/core"
-	"strings"
 )
 
 // Фильтрует канал с доменами на предмет уже скаченных файлов
@@ -28,6 +27,7 @@ func ParseSite(site core.Site) *core.ParseData {
 	result := core.NewParseData()
 
 	result.Numbers = parseNumbers(site.Content)
+	result.Categories = parseCategories(site.Content)
 
 	return &result
 }
@@ -41,7 +41,11 @@ func CollectStatus(sites <-chan core.Site, status *ParseStatus) <-chan core.Site
 				status.Parsed++
 				if len(site.ParseData.Numbers) > 0 {
 					status.NumbersCount++
-					log.Printf("[NUMBERS] [%s] %s", site.Domain, strings.Join(site.ParseData.Numbers, "; "))
+					//log.Printf("[NUMBERS] [%s] %s", site.Domain, strings.Join(site.ParseData.Numbers, "; "))
+				}
+				if len(site.ParseData.Categories) > 0 {
+					status.CategoriesCount++
+					log.Printf("[CATEGORIES] [%s] %+v", site.Domain, site.ParseData.Categories)
 				}
 				out <- site
 			}

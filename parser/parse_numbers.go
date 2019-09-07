@@ -14,6 +14,7 @@ func init() {
 	numbersRegExp = regexp.MustCompile(`[^0-9](\+?[78][\- ]?\(?\d{3}\)?[\- ]?[\d\- ]{7,10})[^0-9]`)
 }
 
+// Парсит номера телефонов с сайта
 func parseNumbers(content string) []string {
 	items := numbersRegExp.FindAllStringSubmatch(content, -1)
 

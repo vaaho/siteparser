@@ -9,7 +9,7 @@ import (
 )
 
 // Загружает список доменов из файла
-func LoadDomains(sourceFile string) <-chan string {
+func LoadDomains(sourceFile string, hasColumnsRow bool) <-chan string {
 	file, err := os.Open(sourceFile)
 	core.FailOnError(err)
 	defer file.Close()
@@ -18,9 +18,12 @@ func LoadDomains(sourceFile string) <-chan string {
 	domains := make(map[string]bool)
 
 	scanner := bufio.NewScanner(file)
+	if hasColumnsRow {
+		scanner.Scan()
+	}
+
 	for scanner.Scan() {
-		domain := scanner.Text()
-		if domain != "" {
+		if domain := scanner.Text(); domain != "" {
 			domains[domain] = true
 		}
 	}
@@ -135,7 +138,7 @@ func WaitAndLog(sites <-chan core.Site, status *DownloadStatus, inProgress <-cha
 func Download(config *core.Config, storage *core.SiteStorage) DownloadStatus {
 	status := NewDownloadStatus()
 
-	domains := LoadDomains(config.InputFile)
+	domains := LoadDomains(config.InputFile, !config.NoColumnsRow)
 	status.Total = len(domains)
 	domains = FilterDownloadedDomains(domains, storage)
 	status.Missed = status.Total - len(domains)

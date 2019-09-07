@@ -48,10 +48,16 @@ func WriteOutputByLine(destFile string, lines <-chan string) <-chan string {
 	return out
 }
 
-func AppendExportColumns(lines <-chan string, columns ExportColumns, storage *core.SiteStorage) <-chan string {
+func AppendExportColumns(lines <-chan string, columns ExportColumns, storage *core.SiteStorage, hasColumnsRow bool) <-chan string {
 	out := make(chan string)
 
 	go func() {
+		if hasColumnsRow {
+			firstLine := <-lines
+			outLine := firstLine + GetExportColumnsNames(columns)
+			//log.Printf("[LINE] " + outLine)
+			out <- outLine
+		}
 		for line := range lines {
 			outLine := line + GetExportColumnsData(line, columns, storage)
 			//log.Printf("[LINE] " + outLine)
@@ -61,6 +67,13 @@ func AppendExportColumns(lines <-chan string, columns ExportColumns, storage *co
 	}()
 
 	return out
+}
+
+func GetExportColumnsNames(columns ExportColumns) string {
+	columnsNames := columns.GetColumnsData()
+
+	result := core.CsvSeparator + strings.Join(columnsNames, core.CsvSeparator)
+	return result
 }
 
 func GetExportColumnsData(line string, columns ExportColumns, storage *core.SiteStorage) string {
@@ -89,7 +102,7 @@ func Export(config *core.Config, storage *core.SiteStorage) {
 	}
 
 	lines := ReadInputByLine(config.InputFile)
-	lines = AppendExportColumns(lines, columns, storage)
+	lines = AppendExportColumns(lines, columns, storage, !config.NoColumnsRow)
 	lines = WriteOutputByLine(config.OutputFile, lines)
 
 	for _ = range lines {
